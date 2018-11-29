@@ -45,9 +45,13 @@ boolean primeraConexion;
 
 //------------------------Funciones de proposito general-----------------------------
 char *nextLine() {
+  //Devuelve la siguiente linea del fichero o '\0' si es la ultima
   char linea[TAMANOLINEAFICHERO + 1];
+  if (ficheroClaves.peek() == -1) {
+    return '\0';
+  }
   while (ficheroClaves.peek() != "\n") {
-    strcat(linea, ficheroClaves.peek());
+    strcat(linea, ficheroClaves.read());
   }
   return linea;
 }
@@ -71,12 +75,14 @@ boolean nombreEnFichero(char *nombre) {
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
   boolean nombreEnFichero = true;
   char *lineaEnLectura = nextLine();
-  for (int i = 0; i < strlen(lineaEnLectura); i++) {
-    if (nombre[0] == lineaEnLectura[i]) {
-      nombreEnFichero = true;
-      for (int j = 1; j < strlen(nombre); j++) {
-        if (nombre[j] != lineaEnLectura[i + j]) {
-          nombreEnFichero = false;
+  while (lineaEnLectura != '\0') {
+    for (int i = 0; i < strlen(lineaEnLectura); i++) {
+      if (nombre[0] == lineaEnLectura[i]) {
+        nombreEnFichero = true;
+        for (int j = 1; j < strlen(nombre); j++) {
+          if (nombre[j] != lineaEnLectura[i + j]) {
+            nombreEnFichero = false;
+          }
         }
       }
     }
