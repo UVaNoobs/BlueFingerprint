@@ -216,7 +216,7 @@ char fase3() {
   //Envia por BT "OK" cuando accede al modo solicitado
   Serial.println("---------Fase 3 de conexion---------");
   Serial.println("");
-  while (true) {  //Arduino espera "0" para entrar en modo modificacion o "1" para modo abrir la cerradura
+  while (true) {  
     if (bluetooth.available() > 0) {
       switch (bluetooth.read()) {
         case '0':
