@@ -47,11 +47,11 @@ boolean primeraConexion;
 char *nextLine() {
   //Devuelve la siguiente linea del fichero o '\0' si es la ultima
   char linea[TAMANOLINEAFICHERO + 1] = "";
-  if (ficheroClaves.peek() == -1) {
+  if (ficheroClaves.read() == -1) {
     return '\0';
   }
-  while (ficheroClaves.peek() != "\n") {
-    strcat(linea, ficheroClaves.read());
+  while (ficheroClaves.read() != "\n") {
+    strcat(linea, ficheroClaves.peek());
   }
   return linea;
 }
@@ -73,8 +73,8 @@ int cuentaLineas() {
   ficheroClaves.close();
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
   int nLineas = 0;
-  while (ficheroClaves.peek() != -1) {
-    if (ficheroClaves.read() == '\n') {
+  while (ficheroClaves.read() != -1) {
+    if (ficheroClaves.peek() == '\n') {
       nLineas ++;
     }
   }
