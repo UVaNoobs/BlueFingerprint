@@ -45,7 +45,7 @@ boolean primeraConexion;
 
 //------------------------Funciones de proposito general-----------------------------
 char *nextLine() {
-  char linea[TAMANOLINEAFICHERO+1];
+  char linea[TAMANOLINEAFICHERO + 1];
   while (ficheroClaves.peek() != "\n") {
     strcat(linea, ficheroClaves.peek());
   }
@@ -64,6 +64,24 @@ int cuentaLineas() {
   ficheroClaves.close();
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
   return nLineas;
+}
+boolean nombreEnFichero(char *nombre) {
+  //Devuelve true si el nombre se encuentra en el fichero y false si no
+  ficheroClaves.close();
+  ficheroClaves = SD.open("ficheroClaves.txt", "r");
+  boolean nombreEnFichero = true;
+  char *lineaEnLectura = nextLine();
+  for (int i = 0; i < strlen(lineaEnLectura); i++) {
+    if (nombre[0] == lineaEnLectura[i]) {
+      nombreEnFichero = true;
+      for (int j = 1; j < strlen(nombre); j++) {
+        if (nombre[j] != lineaEnLectura[i + j]) {
+          nombreEnFichero = false;
+        }
+      }
+    }
+  }
+  return nombreEnFichero;
 }
 
 char *toString(int n) {
