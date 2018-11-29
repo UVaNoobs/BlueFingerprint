@@ -36,9 +36,11 @@
 #define TAMANOMENSAJECIFRADO 256    //TODO
 #define DIGITOSNUMEROAUTENTICACION 4
 #define TAMANOLINEAFICHERO (TAMANONOMBREMOVIL + TAMANOCLAVESIMETRICA + 1)
+#define RXBT 15
+#define TXBT 14
 
 //Variables globales
-SoftwareSerial bluetooth(15, 14);
+SoftwareSerial bluetooth(RXBT, TXBT);
 File ficheroClaves;
 uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 boolean primeraConexion;
