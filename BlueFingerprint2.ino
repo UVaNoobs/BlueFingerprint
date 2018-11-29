@@ -40,13 +40,13 @@
 //Variables globales
 SoftwareSerial bluetooth(10, 11);
 File ficheroClaves;
-uint8_t claveSimetrica[TAMANOCLAVESIMETRICA];
+uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 boolean primeraConexion;
 
 //------------------------Funciones de proposito general-----------------------------
 char *nextLine() {
   //Devuelve la siguiente linea del fichero o '\0' si es la ultima
-  char linea[TAMANOLINEAFICHERO + 1];
+  char linea[TAMANOLINEAFICHERO + 1] = "";
   if (ficheroClaves.peek() == -1) {
     return '\0';
   }
@@ -54,6 +54,19 @@ char *nextLine() {
     strcat(linea, ficheroClaves.read());
   }
   return linea;
+}
+uint8_t *getClaveSimetrica(char *nombre) {
+  char claveSimetrica[TAMANOCLAVESIMETRICA + 1];
+  int linea = nombreEnFichero(nombre);
+  if (nombre != -1) {
+    ficheroClaves.close();
+    ficheroClaves = SD.open("ficheroClaves.txt", "r");
+    for(int i = 0; i<linea-1; i++){
+      (void)nextLine();
+      }
+    strcpy(claveSimetrica,nextLine()[TAMANONOMBREMOVIL+1]);
+  }
+  return (uint8_t *)claveSimetrica;
 }
 int cuentaLineas() {
   //Cuenta el numero de lineas del fichero de claves local
@@ -69,13 +82,15 @@ int cuentaLineas() {
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
   return nLineas;
 }
-boolean nombreEnFichero(char *nombre) {
-  //Devuelve true si el nombre se encuentra en el fichero y false si no
+int nombreEnFichero(char *nombre) {
+  //Devuelve el numero de linea en el que se encuentra el nombre si el nombre se encuentra en el fichero y -1 si no
   ficheroClaves.close();
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
   boolean nombreEnFichero = true;
   char *lineaEnLectura = nextLine();
+  int numeroDeLinea = 0;
   while (lineaEnLectura != '\0') {
+    numeroDeLinea++;
     for (int i = 0; i < strlen(lineaEnLectura); i++) {
       if (nombre[0] == lineaEnLectura[i]) {
         nombreEnFichero = true;
@@ -84,10 +99,14 @@ boolean nombreEnFichero(char *nombre) {
             nombreEnFichero = false;
           }
         }
+        if (nombreEnFichero == true) {
+          return numeroDeLinea;
+        }
       }
     }
+    lineaEnLectura = nextLine();
   }
-  return nombreEnFichero;
+  return -1;
 }
 
 char *toString(int n) {
@@ -124,7 +143,7 @@ int fase1() {
       Serial.print(nombreMovil);
       Serial.println(" solicita conexion");
 
-      if (nombreEnFichero(nombreMovil) == true) {       //Arduino comprueba que el movil esta en el fichero de nombres
+      if (nombreEnFichero(nombreMovil) != -1) {       //Arduino comprueba que el movil esta en el fichero de nombres
         claveSimetrica = getClaveSimetrica(nombreMovil);
         Serial.print(nombreMovil);
         Serial.println(" SI se encuentra en fichero");
