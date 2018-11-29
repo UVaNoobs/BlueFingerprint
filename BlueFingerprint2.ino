@@ -38,7 +38,7 @@
 #define TAMANOLINEAFICHERO (TAMANONOMBREMOVIL + TAMANOCLAVESIMETRICA + 1)
 
 //Variables globales
-SoftwareSerial bluetooth(0, 1);
+SoftwareSerial bluetooth(15,14);
 File ficheroClaves;
 uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 boolean primeraConexion;
