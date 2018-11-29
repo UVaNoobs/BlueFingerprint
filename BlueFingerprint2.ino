@@ -38,7 +38,7 @@
 #define TAMANOLINEAFICHERO (TAMANONOMBREMOVIL + TAMANOCLAVESIMETRICA + 1)
 
 //Variables globales
-SoftwareSerial bluetooth(15,14);
+SoftwareSerial bluetooth(15, 14);
 File ficheroClaves;
 uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 boolean primeraConexion;
@@ -61,10 +61,10 @@ uint8_t *getClaveSimetrica(char *nombre) {
   if (nombre != -1) {
     ficheroClaves.close();
     ficheroClaves = SD.open("ficheroClaves.txt", "r");
-    for(int i = 0; i<linea-1; i++){
+    for (int i = 0; i < linea - 1; i++) {
       (void)nextLine();
-      }
-    strcpy(claveSimetrica,nextLine()[TAMANONOMBREMOVIL+1]);
+    }
+    strcpy(claveSimetrica, nextLine()[TAMANONOMBREMOVIL + 1]);
   }
   return (uint8_t *)claveSimetrica;
 }
@@ -128,7 +128,8 @@ int fase1() {
   //Devuelve el numero de autenticacion enviado al final de la fase 1 de conexion en plano o -1 si se aborto la conexion
   //Recibe por BT el nombre del movil que solicita la conexion y envia por BT el numero de autenticacion para la conexion cifrado con su clave simetrica
   //si la conexion se permite o "NO" si la conexion se aborta
-  Serial.println("Fase 1 de conexion");
+  Serial.println("---------Fase 1 de conexion---------");
+  Serial.println("");  
   char nombreMovil[TAMANONOMBREMOVIL + 1];
   int contador = 0;
 
@@ -172,6 +173,8 @@ boolean fase2(int numeroDeAutenticacion) {
   char *numeroDeAutenticacionPlano = toString(numeroDeAutenticacion);
   char numeroDeAutenticacionCifrado[TAMANOMENSAJECIFRADO + 1];
   int contador = 0;
+  Serial.println("---------Fase 2 de conexion---------");
+  Serial.println("");
 
   while (true) {
     if (bluetooth.available() > 0) {
@@ -209,6 +212,8 @@ char fase3() {
 
   */
   //Envia por BT "OK" cuando accede al modo solicitado
+  Serial.println("---------Fase 3 de conexion---------");
+  Serial.println("");
   while (true) {  //Arduino espera "0" para entrar en modo modificacion o "1" para modo abrir la cerradura
     if (bluetooth.available() > 0) {
       switch (bluetooth.read()) {
@@ -239,9 +244,13 @@ char fase3() {
 }
 
 void setup() {
-  SD.begin();
   Serial.begin(9600);
+  Serial.println("Inicializada comunicacion");
+  SD.begin();
+  Serial.println("Inicializada tarjeta SD");
   bluetooth.begin(38400);
+  Serial.println("Inicializado modulo Bluetooth");
+
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
   primeraConexion = false;
   if (ficheroClaves.size() == 0 || cuentaLineas() == 1) {
