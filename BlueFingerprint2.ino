@@ -72,9 +72,9 @@
 //Variables globales
 File ficheroClaves;
 uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
-boolean primeraConexion;
 
 //------------------------Funciones de proposito general-----------------------------
+//Funciones de formato
 char *toString(int n) {
   //Fuente: https://www.systutorials.com/131/convert-string-to-int-and-reverse/
   int numDigitos = 1;
@@ -106,6 +106,7 @@ char *aArrayDeCaracteres(String s) {
   return char_array;
 
 }
+//Funciones de manipulacion de fichero global de claves
 String nextLine() {
   //Devuelve la siguiente linea del fichero o '\0' si es la ultima
   char linea[TAMANOLINEAFICHERO + 1] = "";
@@ -165,6 +166,13 @@ void setClaveSimetrica(String nombre, uint8_t *clave) {
   ficheroClaves.write('\n');
 }
 
+uint8_t *claveAleatoria() {
+  uint8_t clave[8];
+  for (int i = 0; i < 8; i++) {
+    clave[i] = random(0,256);
+  }
+  return clave;
+}
 
 int cuentaLineas() {
   //Cuenta el numero de lineas del fichero de claves local
@@ -181,8 +189,7 @@ int cuentaLineas() {
   return nLineas;
 }
 
-
-
+//Funciones de comunicacion serial
 void envia(int cadena) {
   Serial.print(cadena);
   Serial.println("#");
@@ -205,6 +212,10 @@ void imprime(String cadena) {
   Serial.println(cadena);
 }
 //-----------------------Funciones relativas a la fase de la conexion----------------
+void primeraConexion() {
+  ficheroClaves.write("master\n");
+  setClaveSimetrica("master", claveAleatoria());
+}
 int fase1() {
   //Devuelve el numero de autenticacion enviado al final de la fase 1 de conexion en plano o -1 si se aborto la conexion
   //Recibe por BT el nombre del movil que solicita la conexion y envia por BT el numero de autenticacion para la conexion cifrado con su clave simetrica
@@ -342,11 +353,10 @@ void setup() {
   //imprime("Inicializada tarjeta SD");
 
   ficheroClaves = SD.open("ficheroClaves.txt");
-  primeraConexion = false;
 
   imprime(ficheroClaves.size());
-  if (ficheroClaves.size() == 0 || cuentaLineas() == 1) {
-    primeraConexion = true;
+  if (ficheroClaves.size() == 0 || cuentaLineas() == 0) {
+    primeraConexion();
   }
 }
 
