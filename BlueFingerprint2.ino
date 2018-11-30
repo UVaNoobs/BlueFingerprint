@@ -1,36 +1,36 @@
 /**
- * El proyecto BlueFingerprint consiste en el establecimiento una conexion segura entre un movil y una placa controladora por medio
- * de Bluetooth de manera que la placa controladora sea capaz de abrir un cerrojo unicamente bajo la autenticacion
- * de la identidad de un usuario legitimo. El objetivo final es crear un sustitutivo de las llaves fisicas para cerraduras
- * reales que verifique de manera mas segura la identidad del usuario que pretende abrirla.
- * 
- * Dado que todo cerrojo fisico tiene, al menos, un usuario legitimo; todos los usuarios del sistema estan supeditados
- * a la autorizacion de un usuario master del cual se obtienen las credenciales en la primera conexion de la historia
- * de la placa.
- * 
- * Dado que una placa representa una cerradura, todas las cerraduras presentan la posibilidad de tener multiples usuarios
- * capaces de abrirlas, por lo que admiten varios usuarios validos. Del mismo modo, en el mundo fisico un usuario no solo 
- * tiene la llave de un cerrojo, sino que puede poseer la llave de varios, por lo que un mismo usuario podra establecer 
- * tambien sesiones de conexion independientes con varias placas controladoras que implementen el sistema sin que esto presente
- * una vulnerabilidad en la conexion.
- * 
- * Para lograr el objetivo, la verificacion de identidad se divide en tres partes:
- * -Verificacion biometrica por parte del movil que impide establecer la conexion en caso de suplantacion, realizada
- * gracias al analisis de huella dactilar integrado en el SO Android.
- * -Integridad de las peticiones de conexion mediante un codigo de validacion aleatorio y una clave simetrica unica 
- * para cada dispositivo capaz de establecer una conexion con la placa. Se implementa el cifrado AES mediante una
- * libreria publica.
- * -Proteccion de las modificaciones en los registros de usuarios permitidos mediante un sistema de contraseña y 
- * un unico usuario master capacitado para realizarlas.
- * 
- * Las posibles vulnerabilidades del sistema mitigadas por BlueFingerprint son:
- * -Suplantacion de identidad
- * -Ataque de tipo man in the middle
- * -Robo del token de verificacion de identidad
- * -Robo de claves de sesion
- * -Ataque a la integridad de las peticiones
- * 
- */
+   El proyecto BlueFingerprint consiste en el establecimiento una conexion segura entre un movil y una placa controladora por medio
+   de Bluetooth de manera que la placa controladora sea capaz de abrir un cerrojo unicamente bajo la autenticacion
+   de la identidad de un usuario legitimo. El objetivo final es crear un sustitutivo de las llaves fisicas para cerraduras
+   reales que verifique de manera mas segura la identidad del usuario que pretende abrirla.
+
+   Dado que todo cerrojo fisico tiene, al menos, un usuario legitimo; todos los usuarios del sistema estan supeditados
+   a la autorizacion de un usuario master del cual se obtienen las credenciales en la primera conexion de la historia
+   de la placa.
+
+   Dado que una placa representa una cerradura, todas las cerraduras presentan la posibilidad de tener multiples usuarios
+   capaces de abrirlas, por lo que admiten varios usuarios validos. Del mismo modo, en el mundo fisico un usuario no solo
+   tiene la llave de un cerrojo, sino que puede poseer la llave de varios, por lo que un mismo usuario podra establecer
+   tambien sesiones de conexion independientes con varias placas controladoras que implementen el sistema sin que esto presente
+   una vulnerabilidad en la conexion.
+
+   Para lograr el objetivo, la verificacion de identidad se divide en tres partes:
+   -Verificacion biometrica por parte del movil que impide establecer la conexion en caso de suplantacion, realizada
+   gracias al analisis de huella dactilar integrado en el SO Android.
+   -Integridad de las peticiones de conexion mediante un codigo de validacion aleatorio y una clave simetrica unica
+   para cada dispositivo capaz de establecer una conexion con la placa. Se implementa el cifrado AES mediante una
+   libreria publica.
+   -Proteccion de las modificaciones en los registros de usuarios permitidos mediante un sistema de contraseña y
+   un unico usuario master capacitado para realizarlas.
+
+   Las posibles vulnerabilidades del sistema mitigadas por BlueFingerprint son:
+   -Suplantacion de identidad
+   -Ataque de tipo man in the middle
+   -Robo del token de verificacion de identidad
+   -Robo de claves de sesion
+   -Ataque a la integridad de las peticiones
+
+*/
 //Librerias de cifrado simetrico AES
 #include <aes_keyschedule.h>
 #include <bcal-cbc.h>
@@ -69,9 +69,8 @@
 #define TAMANOMENSAJECIFRADO 256    //TODO
 #define DIGITOSNUMEROAUTENTICACION 4
 #define TAMANOLINEAFICHERO (TAMANONOMBREMOVIL + TAMANOCLAVESIMETRICA + 1)
-#define RXBT 15
-#define TXBT 14
-
+#define RXBT 2
+#define TXBT 3
 //Variables globales
 SoftwareSerial bluetooth(RXBT, TXBT);
 File ficheroClaves;
@@ -164,17 +163,21 @@ int fase1() {
   //Recibe por BT el nombre del movil que solicita la conexion y envia por BT el numero de autenticacion para la conexion cifrado con su clave simetrica
   //si la conexion se permite o "NO" si la conexion se aborta
   Serial.println("---------Fase 1 de conexion---------");
-  Serial.println("");  
+  Serial.println("");
   char nombreMovil[TAMANONOMBREMOVIL + 1];
   int contador = 0;
 
   while (true) {
     if (bluetooth.available() > 0) {
+      Serial.println("Bluetooth recibiendo");
       char caracterEnLectura = bluetooth.read();
+      Serial.println(caracterEnLectura);
+
       while (contador < TAMANONOMBREMOVIL && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
         nombreMovil[contador] = caracterEnLectura;
         contador ++;
         caracterEnLectura = bluetooth.read();
+        Serial.println(caracterEnLectura);
       }
       Serial.print(nombreMovil);
       Serial.println(" solicita conexion");
@@ -249,7 +252,7 @@ char fase3() {
   //Envia por BT "OK" cuando accede al modo solicitado
   Serial.println("---------Fase 3 de conexion---------");
   Serial.println("");
-  while (true) {  
+  while (true) {
     if (bluetooth.available() > 0) {
       switch (bluetooth.read()) {
         case '0':
@@ -279,11 +282,13 @@ char fase3() {
 }
 
 void setup() {
+  pinMode(RXBT,INPUT);
+  pinMode(TXBT, OUTPUT);
   Serial.begin(9600);
   Serial.println("Inicializada comunicacion");
   SD.begin();
   Serial.println("Inicializada tarjeta SD");
-  bluetooth.begin(38400);
+  bluetooth.begin(9600);
   Serial.println("Inicializado modulo Bluetooth");
 
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
