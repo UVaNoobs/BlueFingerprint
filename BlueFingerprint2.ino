@@ -146,7 +146,7 @@ int nombreEnFichero(char *nombre) {
 char *toString(int n) {
   //Fuente: https://www.systutorials.com/131/convert-string-to-int-and-reverse/
   int numDigitos = 1;
-  int temp = n;
+  int temp = n/10;
   while (temp != 0) {
     temp = n / 10;
     numDigitos++;
