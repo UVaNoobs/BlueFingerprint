@@ -1,0 +1,2 @@
+# BlueFingerprint
+En este repositorio se trabajará sobre el proyecto BlueFingerprint. Dicho proyecto consiste en el diseño de una aplicación que, usando la huella dactilar del móvil, se comunique con un arduino para verificar la validez de la huella. Esto se llevará a cabo accediendo al sistema de archivos del teléfono, cogiendo la huella dactilar o token único para luego cifrarlo y enviarlo por bluetooth. El arduino comprobará si el dispositivo es conocido y si la huella está en su lista. Verificará éxito o fracaso con unos leds verde y rojo, respectivamente.
