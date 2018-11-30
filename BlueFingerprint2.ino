@@ -63,7 +63,7 @@
 #include <string.h>
 
 //Constantes del programa
-#define TAMANONOMBREMOVIL 10
+#define TAMANONOMBREMOVIL 6
 #define TAMANOCLAVESIMETRICA 32
 #define TAMANOMENSAJECIFRADO 256    //TODO
 #define DIGITOSNUMEROAUTENTICACION 4
@@ -71,24 +71,10 @@
 
 //Variables globales
 File ficheroClaves;
-uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
+int *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(int));
 
 //------------------------Funciones de proposito general-----------------------------
 //Funciones de formato
-char *toString(int n) {
-  //Fuente: https://www.systutorials.com/131/convert-string-to-int-and-reverse/
-  int numDigitos = 1;
-  int temp = n / 10;
-  while (temp != 0) {
-    temp = n / 10;
-    numDigitos++;
-  }
-
-  const char base_string[] = "";
-  char out_string[numDigitos + 1];
-  sprintf(out_string, "%s%d", base_string, n);
-  return out_string;
-}
 
 char *aArrayDeCaracteres(String s) {
   //Fuente: https://www.geeksforgeeks.org/convert-string-char-array-cpp/
@@ -127,7 +113,7 @@ String nextLine() {
 int nombreEnFichero(String nombre) {
   //Devuelve el numero de linea en el que se encuentra el nombre si el nombre se encuentra en el fichero y -1 si no
   ficheroClaves.close();
-  ficheroClaves = SD.open("ficheroClaves.txt");
+  ficheroClaves = SD.open("fichero.txt");
   String lineaEnLectura = nextLine();
   int numeroDeLinea = 0;
   while (ficheroClaves.available()) {
@@ -151,30 +137,42 @@ int nombreEnFichero(String nombre) {
   }
   return -1;
 }
-uint8_t *getClaveSimetrica(String nombre) {
+int *getClaveSimetrica(String nombre) {
   String claveSimetrica;
   int linea = nombreEnFichero(nombre);
   claveSimetrica = nextLine();
-  return (uint8_t *)aArrayDeCaracteres(claveSimetrica);
+  return (int *)aArrayDeCaracteres(claveSimetrica);
 }
 
-void setClaveSimetrica(String nombre, uint8_t *clave) {
+void setClaveSimetrica(String nombre, int *clave) {
   int linea = nombreEnFichero(nombre);
-  for (int i = 0; i < TAMANOCLAVESIMETRICA / 8; i++) {
-
-    ficheroClaves.write((char)(clave[i]));
+  String fichero = "";
+  ficheroClaves = SD.open("fichero.txt");
+  for (int i = 0; i < linea; i++) {
+    nextLine();
   }
-  ficheroClaves.write('\n');
+  long posicion = ficheroClaves.position();
+  ficheroClaves.close();
+  
+  ficheroClaves = SD.open("fichero.txt", FILE_WRITE);
+  ficheroClaves.seek(posicion);
+  for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
+    ficheroClaves.print((String)clave[i]);
+    Serial.print("nº: "+(String)clave[i]);
+  }
+  ficheroClaves.print("\n");
+
+  //ficheroClaves.flush();
   ficheroClaves.close();
 }
 
-uint8_t *claveAleatoria() {
-  uint8_t clave[8];
-  for (int i = 0; i < 8; i++) {
+int *claveAleatoria() {
+  int clave[TAMANOCLAVESIMETRICA];
+  for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
     clave[i] = random(0, 256);
 
   }
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
     imprime((int)clave[i]);
   }
   return clave;
@@ -183,7 +181,7 @@ uint8_t *claveAleatoria() {
 int cuentaLineas() {
   //Cuenta el numero de lineas del fichero de claves local
   ficheroClaves.close();
-  ficheroClaves = SD.open("ficheroClaves.txt");
+  ficheroClaves = SD.open("fichero.txt");
   int nLineas = 0;
   while (ficheroClaves.read() != -1) {
     if ((char)ficheroClaves.peek() == '\n') {
@@ -191,7 +189,7 @@ int cuentaLineas() {
     }
   }
   ficheroClaves.close();
-  ficheroClaves = SD.open("ficheroClaves.txt");
+  ficheroClaves = SD.open("fichero.txt");
   return nLineas;
 }
 
@@ -221,11 +219,17 @@ void imprime(String cadena) {
 void primeraConexion() {
   while (true) {
     if (Serial.available()) {
-      ficheroClaves.write("master\n");
-      uint8_t *claveRandom = claveAleatoria();
+
+      ficheroClaves.close();
+      ficheroClaves = SD.open("fichero.txt", FILE_WRITE);
+      ficheroClaves.write("\nmaster\n");
+      ficheroClaves.flush();
+      ficheroClaves.close();
+
+      int *claveRandom = claveAleatoria();
+
 
       setClaveSimetrica("master", claveRandom);
-      ficheroClaves.close();
       break;
     }
   }
@@ -241,7 +245,7 @@ int fase1() {
 
   while (true) {
     if (Serial.available()) {
-      delay(10);
+      delay(50);
       //imprime("Bluetooth recibiendo");
       char caracterEnLectura = Serial.read();
       //imprime(caracterEnLectura);
@@ -254,7 +258,11 @@ int fase1() {
         //imprime(caracterEnLectura);
       }
       imprime(nombreMovil);
-
+      ficheroClaves.close();
+      ficheroClaves = SD.open("fichero.txt");
+      while (ficheroClaves.available()) {
+        imprime(nextLine());
+      }
 
       //imprime(" solicita conexion");
 
@@ -263,8 +271,8 @@ int fase1() {
         //imprime(nombreMovil);
         //imprime(" SI se encuentra en fichero");
         int numeroDeAutenticacion = (int)random(pow(10, DIGITOSNUMEROAUTENTICACION));  //Arduino envia numero de autenticacion de identidad de movil en plano
-        char *numeroDeAutenticacionCifrado = toString(numeroDeAutenticacion);
-        aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
+        char *numeroDeAutenticacionCifrado = (char *)(numeroDeAutenticacion);
+//        aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
         envia(numeroDeAutenticacionCifrado);
 
         return numeroDeAutenticacion;
@@ -284,7 +292,7 @@ boolean fase2(int numeroDeAutenticacion) {
   //Recibe por BT el numero de autenticacion cifrado con la clave simetrica del movil que solicita la conexion
   //Envia por BT "OK" o "NO" en funcion de si la conexion se aborto o no
   //Devuelve true si la conexion continua, false si se aborta
-  char *numeroDeAutenticacionPlano = toString(numeroDeAutenticacion);
+  char *numeroDeAutenticacionPlano = (char *)(numeroDeAutenticacion);
   char numeroDeAutenticacionCifrado[TAMANOMENSAJECIFRADO + 1];
   int contador = 0;
   //imprime("---------Fase 2 de conexion---------");
@@ -300,7 +308,7 @@ boolean fase2(int numeroDeAutenticacion) {
         caracterEnLectura = Serial.read();
       }
 
-      aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
+//      aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
       if (strcmp(numeroDeAutenticacionCifrado, numeroDeAutenticacionPlano) == 0) {
         //Autenticado
         envia("OK");
@@ -367,10 +375,10 @@ void setup() {
   }
   //imprime("Inicializada tarjeta SD");
 
-  ficheroClaves = SD.open("ficheroClaves.txt");
+  ficheroClaves = SD.open("fichero.txt");
 
   imprime(ficheroClaves.size());
-  if (ficheroClaves.size() == 0 || cuentaLineas() == 0) {
+  if (true) { //ficheroClaves.size() == 0) {
     primeraConexion();
   }
 }
