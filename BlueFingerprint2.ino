@@ -92,50 +92,10 @@ String nextLine() {
   linea[contador] = temp[0];
   return linea;
 }
-uint8_t *getClaveSimetrica(char *nombre) {
-  char claveSimetrica[TAMANOCLAVESIMETRICA + 1];
-  int linea = nombreEnFichero(nombre);
-  if (nombre != -1) {
-    ficheroClaves.close();
-    ficheroClaves = SD.open("pepe.txt");
-    for (int i = 0; i < linea - 1; i++) {
-      (void)nextLine();
-    }
-    strcpy(claveSimetrica, nextLine()[TAMANONOMBREMOVIL + 1]);
-  }
-  return (uint8_t *)claveSimetrica;
-}
-uint8_t *getClaveSimetrica(String nombre) {
-  char claveSimetrica[TAMANOCLAVESIMETRICA + 1];
-  int linea = nombreEnFichero(nombre);
-  if (nombre != -1) {
-    ficheroClaves.close();
-    ficheroClaves = SD.open("pepe.txt");
-    for (int i = 0; i < linea ; i++) {
-      (void)nextLine();
-    }
-    strcpy(claveSimetrica, nextLine()[TAMANONOMBREMOVIL + 1]);
-  }
-  return (uint8_t *)claveSimetrica;
-}
-int cuentaLineas() {
-  //Cuenta el numero de lineas del fichero de claves local
-  ficheroClaves.close();
-  ficheroClaves = SD.open("pepe.txt");
-  int nLineas = 0;
-  while (ficheroClaves.read() != -1) {
-    if ((char)ficheroClaves.peek() == '\n') {
-      nLineas ++;
-    }
-  }
-  ficheroClaves.close();
-  ficheroClaves = SD.open("pepe.txt");
-  return nLineas;
-}
 int nombreEnFichero(String nombre) {
   //Devuelve el numero de linea en el que se encuentra el nombre si el nombre se encuentra en el fichero y -1 si no
   ficheroClaves.close();
-  ficheroClaves = SD.open("pepe.txt");
+  ficheroClaves = SD.open("ficheroClaves.txt");
   String lineaEnLectura = nextLine();
   int numeroDeLinea = 0;
   while (ficheroClaves.available()) {
@@ -158,6 +118,37 @@ int nombreEnFichero(String nombre) {
   }
   return -1;
 }
+uint8_t *getClaveSimetrica(String nombre) {
+  String claveSimetrica;
+  int linea = nombreEnFichero(nombre);
+  claveSimetrica = nextLine();
+  return (uint8_t *)claveSimetrica.toCharArray();
+}
+
+void setClaveSimetrica(String nombre, uint8_t clave) {
+  int linea = nombreEnFichero(nombre);
+  for (int i = 0; i < TAMANOCLAVESIMETRICA / 8; i++) {
+    ficheroClaves.write((char)clave[i]);
+  }
+  ficheroClaves.write('\n')
+}
+
+}
+int cuentaLineas() {
+  //Cuenta el numero de lineas del fichero de claves local
+  ficheroClaves.close();
+  ficheroClaves = SD.open("ficheroClaves.txt");
+  int nLineas = 0;
+  while (ficheroClaves.read() != -1) {
+    if ((char)ficheroClaves.peek() == '\n') {
+      nLineas ++;
+    }
+  }
+  ficheroClaves.close();
+  ficheroClaves = SD.open("ficheroClaves.txt");
+  return nLineas;
+}
+
 
 char *toString(int n) {
   //Fuente: https://www.systutorials.com/131/convert-string-to-int-and-reverse/
@@ -207,15 +198,15 @@ int fase1() {
       //imprime(caracterEnLectura);
 
       while (contador < TAMANONOMBREMOVIL && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
-        nombreMovil+= caracterEnLectura;
+        nombreMovil += caracterEnLectura;
         contador ++;
         delay(100);
         caracterEnLectura = Serial.read();
         //imprime(caracterEnLectura);
       }
       imprime(nombreMovil);
-      
-      
+
+
       //imprime(" solicita conexion");
 
       if (nombreEnFichero(nombreMovil) != -1) {       //Arduino comprueba que el movil esta en el fichero de nombres
@@ -327,7 +318,7 @@ void setup() {
   }
   //imprime("Inicializada tarjeta SD");
 
-  ficheroClaves = SD.open("pepe.txt");
+  ficheroClaves = SD.open("ficheroClaves.txt");
   primeraConexion = false;
 
   imprime(ficheroClaves.size());
