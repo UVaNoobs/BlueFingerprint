@@ -111,7 +111,7 @@ uint8_t *getClaveSimetrica(String nombre) {
   if (nombre != -1) {
     ficheroClaves.close();
     ficheroClaves = SD.open("pepe.txt");
-    for (int i = 0; i < linea - 1; i++) {
+    for (int i = 0; i < linea ; i++) {
       (void)nextLine();
     }
     strcpy(claveSimetrica, nextLine()[TAMANONOMBREMOVIL + 1]);
@@ -219,7 +219,6 @@ int fase1() {
       //imprime(" solicita conexion");
 
       if (nombreEnFichero(nombreMovil) != -1) {       //Arduino comprueba que el movil esta en el fichero de nombres
-        envia("Hola pepe");
         claveSimetrica = getClaveSimetrica(nombreMovil);
         //imprime(nombreMovil);
         //imprime(" SI se encuentra en fichero");
