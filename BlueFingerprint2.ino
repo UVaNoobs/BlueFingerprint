@@ -63,7 +63,7 @@
 #include <string.h>
 
 //Constantes del programa
-#define TAMANONOMBREMOVIL 40
+#define TAMANONOMBREMOVIL 4
 #define TAMANOCLAVESIMETRICA 32
 #define TAMANOMENSAJECIFRADO 256    //TODO
 #define DIGITOSNUMEROAUTENTICACION 4
@@ -75,15 +75,21 @@ uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 boolean primeraConexion;
 
 //------------------------Funciones de proposito general-----------------------------
-char *nextLine() {
+String nextLine() {
   //Devuelve la siguiente linea del fichero o '\0' si es la ultima
   char linea[TAMANOLINEAFICHERO + 1] = "";
-  if (ficheroClaves.read() == -1) {
+  String temp;
+  if (!ficheroClaves.available() ) {
     return '\0';
   }
-  while (ficheroClaves.read() != "\n") {
-    strcat(linea, ficheroClaves.peek());
+  int contador  = 0;
+  temp = (char)ficheroClaves.read();
+  while (ficheroClaves.available() && contador < TAMANOLINEAFICHERO &&  temp[0] != '\n') {
+    linea[contador] = temp[0];
+    temp = (char)ficheroClaves.read();
+    contador++;
   }
+  linea[contador] = temp[0];
   return linea;
 }
 uint8_t *getClaveSimetrica(char *nombre) {
@@ -91,7 +97,20 @@ uint8_t *getClaveSimetrica(char *nombre) {
   int linea = nombreEnFichero(nombre);
   if (nombre != -1) {
     ficheroClaves.close();
-    ficheroClaves = SD.open("ficheroClaves.txt", "r");
+    ficheroClaves = SD.open("pepe.txt");
+    for (int i = 0; i < linea - 1; i++) {
+      (void)nextLine();
+    }
+    strcpy(claveSimetrica, nextLine()[TAMANONOMBREMOVIL + 1]);
+  }
+  return (uint8_t *)claveSimetrica;
+}
+uint8_t *getClaveSimetrica(String nombre) {
+  char claveSimetrica[TAMANOCLAVESIMETRICA + 1];
+  int linea = nombreEnFichero(nombre);
+  if (nombre != -1) {
+    ficheroClaves.close();
+    ficheroClaves = SD.open("pepe.txt");
     for (int i = 0; i < linea - 1; i++) {
       (void)nextLine();
     }
@@ -102,35 +121,35 @@ uint8_t *getClaveSimetrica(char *nombre) {
 int cuentaLineas() {
   //Cuenta el numero de lineas del fichero de claves local
   ficheroClaves.close();
-  ficheroClaves = SD.open("ficheroClaves.txt", "r");
+  ficheroClaves = SD.open("pepe.txt");
   int nLineas = 0;
   while (ficheroClaves.read() != -1) {
-    if (ficheroClaves.peek() == '\n') {
+    if ((char)ficheroClaves.peek() == '\n') {
       nLineas ++;
     }
   }
   ficheroClaves.close();
-  ficheroClaves = SD.open("ficheroClaves.txt", "r");
+  ficheroClaves = SD.open("pepe.txt");
   return nLineas;
 }
-int nombreEnFichero(char *nombre) {
+int nombreEnFichero(String nombre) {
   //Devuelve el numero de linea en el que se encuentra el nombre si el nombre se encuentra en el fichero y -1 si no
   ficheroClaves.close();
-  ficheroClaves = SD.open("ficheroClaves.txt", "r");
-  boolean nombreEnFichero = true;
-  char *lineaEnLectura = nextLine();
+  ficheroClaves = SD.open("pepe.txt");
+  String lineaEnLectura = nextLine();
   int numeroDeLinea = 0;
-  while (lineaEnLectura != '\0') {
+  while (ficheroClaves.available()) {
     numeroDeLinea++;
-    for (int i = 0; i < strlen(lineaEnLectura); i++) {
-      if (nombre[0] == lineaEnLectura[i]) {
-        nombreEnFichero = true;
-        for (int j = 1; j < strlen(nombre); j++) {
-          if (nombre[j] != lineaEnLectura[i + j]) {
-            nombreEnFichero = false;
-          }
-        }
-        if (nombreEnFichero == true) {
+
+    for (int i = 0; i < lineaEnLectura.length() - 1; i++) {
+
+      if (lineaEnLectura.length() - 1 != nombre.length()) {
+        break;
+      }
+      if (lineaEnLectura[i] != nombre[i]) {
+        break;
+      } else {
+        if (i == lineaEnLectura.length() - 2) {
           return numeroDeLinea;
         }
       }
@@ -143,7 +162,7 @@ int nombreEnFichero(char *nombre) {
 char *toString(int n) {
   //Fuente: https://www.systutorials.com/131/convert-string-to-int-and-reverse/
   int numDigitos = 1;
-  int temp = n/10;
+  int temp = n / 10;
   while (temp != 0) {
     temp = n / 10;
     numDigitos++;
@@ -154,6 +173,13 @@ char *toString(int n) {
   sprintf(out_string, "%s%d", base_string, n);
   return out_string;
 }
+void envia(int cadena) {
+  Serial.print(cadena);
+  Serial.println("#");
+}
+void imprime(int cadena) {
+  Serial.println(cadena);
+}
 void envia(char *cadena) {
   Serial.print(cadena);
   Serial.println("#");
@@ -161,36 +187,42 @@ void envia(char *cadena) {
 void imprime(char *cadena) {
   Serial.println(cadena);
 }
+void imprime(String cadena) {
+  Serial.println(cadena);
+}
 //-----------------------Funciones relativas a la fase de la conexion----------------
 int fase1() {
   //Devuelve el numero de autenticacion enviado al final de la fase 1 de conexion en plano o -1 si se aborto la conexion
   //Recibe por BT el nombre del movil que solicita la conexion y envia por BT el numero de autenticacion para la conexion cifrado con su clave simetrica
   //si la conexion se permite o "NO" si la conexion se aborta
-  imprime("---------Fase 1 de conexion---------");
-  imprime("");
-  char nombreMovil[TAMANONOMBREMOVIL + 1];
+  //imprime("---------Fase 1 de conexion---------");
+  //imprime("");
+  String nombreMovil;//[TAMANONOMBREMOVIL + 1];
   int contador = 0;
 
   while (true) {
     if (Serial.available()) {
-      imprime("Bluetooth recibiendo");
+      //imprime("Bluetooth recibiendo");
       char caracterEnLectura = Serial.read();
-      imprime(caracterEnLectura);
+      //imprime(caracterEnLectura);
 
       while (contador < TAMANONOMBREMOVIL && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
-        nombreMovil[contador] = caracterEnLectura;
+        nombreMovil+= caracterEnLectura;
         contador ++;
         delay(100);
         caracterEnLectura = Serial.read();
-        imprime(caracterEnLectura);
+        //imprime(caracterEnLectura);
       }
       imprime(nombreMovil);
-      imprime(" solicita conexion");
+      
+      
+      //imprime(" solicita conexion");
 
       if (nombreEnFichero(nombreMovil) != -1) {       //Arduino comprueba que el movil esta en el fichero de nombres
+        envia("Hola pepe");
         claveSimetrica = getClaveSimetrica(nombreMovil);
-        imprime(nombreMovil);
-        imprime(" SI se encuentra en fichero");
+        //imprime(nombreMovil);
+        //imprime(" SI se encuentra en fichero");
         int numeroDeAutenticacion = (int)random(pow(10, DIGITOSNUMEROAUTENTICACION));  //Arduino envia numero de autenticacion de identidad de movil en plano
         char *numeroDeAutenticacionCifrado = toString(numeroDeAutenticacion);
         aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
@@ -199,8 +231,8 @@ int fase1() {
         return numeroDeAutenticacion;
       } else {
         //Nombre no esta en fichero
-        imprime(nombreMovil);
-        imprime(" NO se encuentra en fichero");
+        //imprime(nombreMovil);
+        //imprime(" NO se encuentra en fichero");
         envia("NO");
 
         return -1;
@@ -216,8 +248,8 @@ boolean fase2(int numeroDeAutenticacion) {
   char *numeroDeAutenticacionPlano = toString(numeroDeAutenticacion);
   char numeroDeAutenticacionCifrado[TAMANOMENSAJECIFRADO + 1];
   int contador = 0;
-  imprime("---------Fase 2 de conexion---------");
-  imprime("");
+  //imprime("---------Fase 2 de conexion---------");
+  //imprime("");
 
   while (true) {
     if (Serial.available() > 0) {
@@ -233,12 +265,12 @@ boolean fase2(int numeroDeAutenticacion) {
       if (strcmp(numeroDeAutenticacionCifrado, numeroDeAutenticacionPlano) == 0) {
         //Autenticado
         envia("OK");
-        imprime("Identidad confirmada");
+        //imprime("Identidad confirmada");
         return true;
       } else {
         //Falso
         envia("NO");
-        imprime("Identidad falsa. Abortando conexion");
+        //imprime("Identidad falsa. Abortando conexion");
         return false;
       }
     }
@@ -255,31 +287,31 @@ char fase3() {
 
   */
   //Envia por BT "OK" cuando accede al modo solicitado
-  imprime("---------Fase 3 de conexion---------");
-  imprime("");
+  //imprime("---------Fase 3 de conexion---------");
+  //imprime("");
   while (true) {
     if (Serial.available() > 0) {
       switch (Serial.read()) {
         case '0':
           envia("OK");
-          imprime("Entrando en modo open");
+          //imprime("Entrando en modo open");
           return '0';
         case '1':
           envia("OK");
 
-          imprime("Entrando en modo show user list");
+          //imprime("Entrando en modo show user list");
           return '1';
 
         case '2':
           envia("OK");
 
-          imprime("Entrando en modo delete user");
+          //imprime("Entrando en modo delete user");
           return '2';
 
         case '3':
           envia("OK");
 
-          imprime("Entrando en modo add user");
+          //imprime("Entrando en modo add user");
           return '3';
       }
     }
@@ -288,12 +320,18 @@ char fase3() {
 
 void setup() {
   Serial.begin(9600);
-  imprime("Inicializada comunicacion");
-  SD.begin();
-  imprime("Inicializada tarjeta SD");
+  //imprime("Inicializada comunicacion");
+  if (!SD.begin(53))
+  {
+    Serial.println(F("Error al iniciar"));
+    return;
+  }
+  //imprime("Inicializada tarjeta SD");
 
-  ficheroClaves = SD.open("ficheroClaves.txt", "r");
+  ficheroClaves = SD.open("pepe.txt");
   primeraConexion = false;
+
+  imprime(ficheroClaves.size());
   if (ficheroClaves.size() == 0 || cuentaLineas() == 1) {
     primeraConexion = true;
   }
@@ -320,15 +358,15 @@ void loop() {
       }
 
     } else {    //Enviado "NO" en fase 2 de conexion
-      imprime("");
-      imprime("----------------------REINICIO DE CONEXION-------------------");
-      imprime("");
+      //imprime("");
+      //imprime("----------------------REINICIO DE CONEXION-------------------");
+      //imprime("");
     }
 
   }
   else {    //Enviado "NO" en fase 1 de conexion
-    imprime("");
-    imprime("----------------------REINICIO DE CONEXION-------------------");
-    imprime("");
+    //imprime("");
+    //imprime("----------------------REINICIO DE CONEXION-------------------");
+    //imprime("");
   }
 }
