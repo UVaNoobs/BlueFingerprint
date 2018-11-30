@@ -63,7 +63,7 @@
 #include <string.h>
 
 //Constantes del programa
-#define TAMANONOMBREMOVIL 4
+#define TAMANONOMBREMOVIL 10
 #define TAMANOCLAVESIMETRICA 32
 #define TAMANOMENSAJECIFRADO 256    //TODO
 #define DIGITOSNUMEROAUTENTICACION 4
@@ -147,6 +147,7 @@ int nombreEnFichero(String nombre) {
       }
     }
     lineaEnLectura = nextLine();
+    ficheroClaves.close();
   }
   return -1;
 }
@@ -164,12 +165,17 @@ void setClaveSimetrica(String nombre, uint8_t *clave) {
     ficheroClaves.write((char)(clave[i]));
   }
   ficheroClaves.write('\n');
+  ficheroClaves.close();
 }
 
 uint8_t *claveAleatoria() {
   uint8_t clave[8];
   for (int i = 0; i < 8; i++) {
-    clave[i] = random(0,256);
+    clave[i] = random(0, 256);
+
+  }
+  for (int i = 0; i < 8; i++) {
+    imprime((int)clave[i]);
   }
   return clave;
 }
@@ -213,8 +219,16 @@ void imprime(String cadena) {
 }
 //-----------------------Funciones relativas a la fase de la conexion----------------
 void primeraConexion() {
-  ficheroClaves.write("master\n");
-  setClaveSimetrica("master", claveAleatoria());
+  while (true) {
+    if (Serial.available()) {
+      ficheroClaves.write("master\n");
+      uint8_t *claveRandom = claveAleatoria();
+
+      setClaveSimetrica("master", claveRandom);
+      ficheroClaves.close();
+      break;
+    }
+  }
 }
 int fase1() {
   //Devuelve el numero de autenticacion enviado al final de la fase 1 de conexion en plano o -1 si se aborto la conexion
@@ -227,6 +241,7 @@ int fase1() {
 
   while (true) {
     if (Serial.available()) {
+      delay(10);
       //imprime("Bluetooth recibiendo");
       char caracterEnLectura = Serial.read();
       //imprime(caracterEnLectura);
