@@ -59,7 +59,6 @@
 #include <aes256_enc.h>
 
 //Librerias de comunicacion y gestion de memoria
-#include <SoftwareSerial.h>
 #include <SD.h>
 #include <string.h>
 
@@ -69,10 +68,8 @@
 #define TAMANOMENSAJECIFRADO 256    //TODO
 #define DIGITOSNUMEROAUTENTICACION 4
 #define TAMANOLINEAFICHERO (TAMANONOMBREMOVIL + TAMANOCLAVESIMETRICA + 1)
-#define RXBT 2
-#define TXBT 3
+
 //Variables globales
-SoftwareSerial bluetooth(RXBT, TXBT);
 File ficheroClaves;
 uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 boolean primeraConexion;
@@ -157,46 +154,54 @@ char *toString(int n) {
   sprintf(out_string, "%s%d", base_string, n);
   return out_string;
 }
+void envia(char *cadena) {
+  Serial.print(cadena);
+  Serial.println("#");
+}
+void imprime(char *cadena) {
+  Serial.println(cadena);
+}
 //-----------------------Funciones relativas a la fase de la conexion----------------
 int fase1() {
   //Devuelve el numero de autenticacion enviado al final de la fase 1 de conexion en plano o -1 si se aborto la conexion
   //Recibe por BT el nombre del movil que solicita la conexion y envia por BT el numero de autenticacion para la conexion cifrado con su clave simetrica
   //si la conexion se permite o "NO" si la conexion se aborta
-  Serial.println("---------Fase 1 de conexion---------");
-  Serial.println("");
+  imprime("---------Fase 1 de conexion---------");
+  imprime("");
   char nombreMovil[TAMANONOMBREMOVIL + 1];
   int contador = 0;
 
   while (true) {
-    if (bluetooth.available() > 0) {
-      Serial.println("Bluetooth recibiendo");
-      char caracterEnLectura = bluetooth.read();
-      Serial.println(caracterEnLectura);
+    if (Serial.available()) {
+      imprime("Bluetooth recibiendo");
+      char caracterEnLectura = Serial.read();
+      imprime(caracterEnLectura);
 
       while (contador < TAMANONOMBREMOVIL && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
         nombreMovil[contador] = caracterEnLectura;
         contador ++;
-        caracterEnLectura = bluetooth.read();
-        Serial.println(caracterEnLectura);
+        delay(100);
+        caracterEnLectura = Serial.read();
+        imprime(caracterEnLectura);
       }
-      Serial.print(nombreMovil);
-      Serial.println(" solicita conexion");
+      imprime(nombreMovil);
+      imprime(" solicita conexion");
 
       if (nombreEnFichero(nombreMovil) != -1) {       //Arduino comprueba que el movil esta en el fichero de nombres
         claveSimetrica = getClaveSimetrica(nombreMovil);
-        Serial.print(nombreMovil);
-        Serial.println(" SI se encuentra en fichero");
+        imprime(nombreMovil);
+        imprime(" SI se encuentra en fichero");
         int numeroDeAutenticacion = (int)random(pow(10, DIGITOSNUMEROAUTENTICACION));  //Arduino envia numero de autenticacion de identidad de movil en plano
         char *numeroDeAutenticacionCifrado = toString(numeroDeAutenticacion);
         aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
-        bluetooth.write(numeroDeAutenticacionCifrado);
+        envia(numeroDeAutenticacionCifrado);
 
         return numeroDeAutenticacion;
       } else {
         //Nombre no esta en fichero
-        Serial.print(nombreMovil);
-        Serial.println(" NO se encuentra en fichero");
-        bluetooth.write("NO");
+        imprime(nombreMovil);
+        imprime(" NO se encuentra en fichero");
+        envia("NO");
 
         return -1;
       }
@@ -211,29 +216,29 @@ boolean fase2(int numeroDeAutenticacion) {
   char *numeroDeAutenticacionPlano = toString(numeroDeAutenticacion);
   char numeroDeAutenticacionCifrado[TAMANOMENSAJECIFRADO + 1];
   int contador = 0;
-  Serial.println("---------Fase 2 de conexion---------");
-  Serial.println("");
+  imprime("---------Fase 2 de conexion---------");
+  imprime("");
 
   while (true) {
-    if (bluetooth.available() > 0) {
-      char caracterEnLectura = bluetooth.read();
+    if (Serial.available() > 0) {
+      char caracterEnLectura = Serial.read();
 
       while (contador < TAMANOMENSAJECIFRADO && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
         numeroDeAutenticacionCifrado[contador] = caracterEnLectura;
         contador ++;
-        caracterEnLectura = bluetooth.read();
+        caracterEnLectura = Serial.read();
       }
 
       aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
       if (strcmp(numeroDeAutenticacionCifrado, numeroDeAutenticacionPlano) == 0) {
         //Autenticado
-        bluetooth.write("OK");
-        Serial.println("Identidad confirmada");
+        envia("OK");
+        imprime("Identidad confirmada");
         return true;
       } else {
         //Falso
-        bluetooth.write("NO");
-        Serial.println("Identidad falsa. Abortando conexion");
+        envia("NO");
+        imprime("Identidad falsa. Abortando conexion");
         return false;
       }
     }
@@ -250,31 +255,31 @@ char fase3() {
 
   */
   //Envia por BT "OK" cuando accede al modo solicitado
-  Serial.println("---------Fase 3 de conexion---------");
-  Serial.println("");
+  imprime("---------Fase 3 de conexion---------");
+  imprime("");
   while (true) {
-    if (bluetooth.available() > 0) {
-      switch (bluetooth.read()) {
+    if (Serial.available() > 0) {
+      switch (Serial.read()) {
         case '0':
-          bluetooth.write("OK");
-          Serial.println("Entrando en modo open");
+          envia("OK");
+          imprime("Entrando en modo open");
           return '0';
         case '1':
-          bluetooth.write("OK");
+          envia("OK");
 
-          Serial.println("Entrando en modo show user list");
+          imprime("Entrando en modo show user list");
           return '1';
 
         case '2':
-          bluetooth.write("OK");
+          envia("OK");
 
-          Serial.println("Entrando en modo delete user");
+          imprime("Entrando en modo delete user");
           return '2';
 
         case '3':
-          bluetooth.write("OK");
+          envia("OK");
 
-          Serial.println("Entrando en modo add user");
+          imprime("Entrando en modo add user");
           return '3';
       }
     }
@@ -282,14 +287,10 @@ char fase3() {
 }
 
 void setup() {
-  pinMode(RXBT,INPUT);
-  pinMode(TXBT, OUTPUT);
   Serial.begin(9600);
-  Serial.println("Inicializada comunicacion");
+  imprime("Inicializada comunicacion");
   SD.begin();
-  Serial.println("Inicializada tarjeta SD");
-  bluetooth.begin(9600);
-  Serial.println("Inicializado modulo Bluetooth");
+  imprime("Inicializada tarjeta SD");
 
   ficheroClaves = SD.open("ficheroClaves.txt", "r");
   primeraConexion = false;
@@ -319,15 +320,15 @@ void loop() {
       }
 
     } else {    //Enviado "NO" en fase 2 de conexion
-      Serial.println("");
-      Serial.println("----------------------REINICIO DE CONEXION-------------------");
-      Serial.println("");
+      imprime("");
+      imprime("----------------------REINICIO DE CONEXION-------------------");
+      imprime("");
     }
 
   }
   else {    //Enviado "NO" en fase 1 de conexion
-    Serial.println("");
-    Serial.println("----------------------REINICIO DE CONEXION-------------------");
-    Serial.println("");
+    imprime("");
+    imprime("----------------------REINICIO DE CONEXION-------------------");
+    imprime("");
   }
 }
