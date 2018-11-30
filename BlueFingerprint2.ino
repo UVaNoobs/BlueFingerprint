@@ -75,6 +75,37 @@ uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 boolean primeraConexion;
 
 //------------------------Funciones de proposito general-----------------------------
+char *toString(int n) {
+  //Fuente: https://www.systutorials.com/131/convert-string-to-int-and-reverse/
+  int numDigitos = 1;
+  int temp = n / 10;
+  while (temp != 0) {
+    temp = n / 10;
+    numDigitos++;
+  }
+
+  const char base_string[] = "";
+  char out_string[numDigitos + 1];
+  sprintf(out_string, "%s%d", base_string, n);
+  return out_string;
+}
+
+char *aArrayDeCaracteres(String s) {
+  //Fuente: https://www.geeksforgeeks.org/convert-string-char-array-cpp/
+  // assigning value to string s
+
+  int n = s.length();
+
+  // declaring character array
+  char char_array[n + 1];
+
+  // copying the contents of the
+  // string to char array
+  strcpy(char_array, s.c_str());
+
+  return char_array;
+
+}
 String nextLine() {
   //Devuelve la siguiente linea del fichero o '\0' si es la ultima
   char linea[TAMANOLINEAFICHERO + 1] = "";
@@ -122,18 +153,19 @@ uint8_t *getClaveSimetrica(String nombre) {
   String claveSimetrica;
   int linea = nombreEnFichero(nombre);
   claveSimetrica = nextLine();
-  return (uint8_t *)claveSimetrica.toCharArray();
+  return (uint8_t *)aArrayDeCaracteres(claveSimetrica);
 }
 
-void setClaveSimetrica(String nombre, uint8_t clave) {
+void setClaveSimetrica(String nombre, uint8_t *clave) {
   int linea = nombreEnFichero(nombre);
   for (int i = 0; i < TAMANOCLAVESIMETRICA / 8; i++) {
-    ficheroClaves.write((char)clave[i]);
+
+    ficheroClaves.write((char)(clave[i]));
   }
-  ficheroClaves.write('\n')
+  ficheroClaves.write('\n');
 }
 
-}
+
 int cuentaLineas() {
   //Cuenta el numero de lineas del fichero de claves local
   ficheroClaves.close();
@@ -150,20 +182,7 @@ int cuentaLineas() {
 }
 
 
-char *toString(int n) {
-  //Fuente: https://www.systutorials.com/131/convert-string-to-int-and-reverse/
-  int numDigitos = 1;
-  int temp = n / 10;
-  while (temp != 0) {
-    temp = n / 10;
-    numDigitos++;
-  }
 
-  const char base_string[] = "";
-  char out_string[numDigitos + 1];
-  sprintf(out_string, "%s%d", base_string, n);
-  return out_string;
-}
 void envia(int cadena) {
   Serial.print(cadena);
   Serial.println("#");
@@ -177,6 +196,10 @@ void envia(char *cadena) {
 }
 void imprime(char *cadena) {
   Serial.println(cadena);
+}
+void envia(String cadena) {
+  Serial.print(cadena);
+  Serial.println("#");
 }
 void imprime(String cadena) {
   Serial.println(cadena);
