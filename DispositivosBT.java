@@ -1,15 +1,16 @@
 package com.grg.bluetoothandroidarduino;
 
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,6 +25,8 @@ public class DispositivosBT extends AppCompatActivity {
     //1)
     // Depuración de LOGCAT
     private static final String TAG = "DispositivosBT"; //<-<- PARTE A MODIFICAR >->->
+    Button idQRGenerator3;
+
     // Declaracion de ListView
     ListView IdLista;
     // String que se enviara a la actividad principal, mainactivity
@@ -37,12 +40,33 @@ public class DispositivosBT extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dispositivos_bt);
+
+        addButtonListener();
+    }
+
+    public void addButtonListener(){
+        final Context context = this;
+
+        idQRGenerator3 = (Button) findViewById(R.id.idQRGenerator3);
+
+        /* idQRGenerator3.setOnClickListener(new OnClickListener() {
+
+            @Override
+            public void onClick(View arg0) {
+
+                Intent intent = new Intent(context, App2Activity.class);
+                startActivity(intent);
+
+            }
+
+        });*/
     }
 
     @Override
     public void onResume()
     {
         super.onResume();
+        //createQR();
         //---------------------------------
         VerificarEstadoBT();
 
@@ -53,6 +77,8 @@ public class DispositivosBT extends AppCompatActivity {
         IdLista.setAdapter(mPairedDevicesArrayAdapter);
         IdLista.setOnItemClickListener(mDeviceClickListener);
         // Obtiene el adaptador local Bluetooth adapter
+
+
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
 
         //------------------- EN CASO DE ERROR -------------------------------------
@@ -72,6 +98,9 @@ public class DispositivosBT extends AppCompatActivity {
             }
         }
     }
+
+
+
 
     // Configura un (on-click) para la lista
     private AdapterView.OnItemClickListener mDeviceClickListener = new AdapterView.OnItemClickListener() {
@@ -105,4 +134,5 @@ public class DispositivosBT extends AppCompatActivity {
             }
         }
     }
+
 }
