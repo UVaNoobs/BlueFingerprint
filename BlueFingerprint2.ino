@@ -3,17 +3,14 @@
    de Bluetooth de manera que la placa controladora sea capaz de abrir un cerrojo unicamente bajo la autenticacion
    de la identidad de un usuario legitimo. El objetivo final es crear un sustitutivo de las llaves fisicas para cerraduras
    reales que verifique de manera mas segura la identidad del usuario que pretende abrirla.
-
    Dado que todo cerrojo fisico tiene, al menos, un usuario legitimo; todos los usuarios del sistema estan supeditados
    a la autorizacion de un usuario master del cual se obtienen las credenciales en la primera conexion de la historia
    de la placa.
-
    Dado que una placa representa una cerradura, todas las cerraduras presentan la posibilidad de tener multiples usuarios
    capaces de abrirlas, por lo que admiten varios usuarios validos. Del mismo modo, en el mundo fisico un usuario no solo
    tiene la llave de un cerrojo, sino que puede poseer la llave de varios, por lo que un mismo usuario podra establecer
    tambien sesiones de conexion independientes con varias placas controladoras que implementen el sistema sin que esto presente
    una vulnerabilidad en la conexion.
-
    Para lograr el objetivo, la verificacion de identidad se divide en tres partes:
    -Verificacion biometrica por parte del movil que impide establecer la conexion en caso de suplantacion, realizada
    gracias al analisis de huella dactilar integrado en el SO Android.
@@ -22,14 +19,12 @@
    libreria publica.
    -Proteccion de las modificaciones en los registros de usuarios permitidos mediante un sistema de contraseña y
    un unico usuario master capacitado para realizarlas.
-
    Las posibles vulnerabilidades del sistema mitigadas por BlueFingerprint son:
    -Suplantacion de identidad
    -Ataque de tipo man in the middle
    -Robo del token de verificacion de identidad
    -Robo de claves de sesion
    -Ataque a la integridad de las peticiones
-
 */
 //Librerias de cifrado simetrico AES
 #include <aes_keyschedule.h>
@@ -71,7 +66,7 @@
 
 //Variables globales
 File ficheroClaves;
-int *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(int));
+uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
 
 //------------------------Funciones de proposito general-----------------------------
 //Funciones de formato
@@ -95,25 +90,22 @@ char *aArrayDeCaracteres(String s) {
 //Funciones de manipulacion de fichero global de claves
 String nextLine() {
   //Devuelve la siguiente linea del fichero o '\0' si es la ultima
-  char linea[TAMANOLINEAFICHERO + 1] = "";
-  String temp;
+  String linea;
   if (!ficheroClaves.available() ) {
     return '\0';
   }
-  int contador  = 0;
-  temp = (char)ficheroClaves.read();
-  while (ficheroClaves.available() && contador < TAMANOLINEAFICHERO &&  temp[0] != '\n') {
-    linea[contador] = temp[0];
+  char temp = (char)ficheroClaves.read();
+  while (ficheroClaves.available() &&  temp != '\n') {
+    linea += temp;
     temp = (char)ficheroClaves.read();
-    contador++;
   }
-  linea[contador] = temp[0];
+ 
   return linea;
 }
 int nombreEnFichero(String nombre) {
   //Devuelve el numero de linea en el que se encuentra el nombre si el nombre se encuentra en el fichero y -1 si no
   ficheroClaves.close();
-  ficheroClaves = SD.open("fichero.txt");
+  ficheroClaves = SD.open("hola.txt");
   String lineaEnLectura = nextLine();
   int numeroDeLinea = 0;
   while (ficheroClaves.available()) {
@@ -121,7 +113,7 @@ int nombreEnFichero(String nombre) {
 
     for (int i = 0; i < lineaEnLectura.length() - 1; i++) {
 
-      if (lineaEnLectura.length() - 1 != nombre.length()) {
+      if (lineaEnLectura.length() - 1 != nombre.length()-1) {
         break;
       }
       if (lineaEnLectura[i] != nombre[i]) {
@@ -137,51 +129,65 @@ int nombreEnFichero(String nombre) {
   }
   return -1;
 }
-int *getClaveSimetrica(String nombre) {
+uint8_t *getClaveSimetrica(String nombre) {
+  
   String claveSimetrica;
   int linea = nombreEnFichero(nombre);
-  claveSimetrica = nextLine();
-  return (int *)aArrayDeCaracteres(claveSimetrica);
-}
-
-void setClaveSimetrica(String nombre, int *clave) {
-  int linea = nombreEnFichero(nombre);
-  String fichero = "";
-  ficheroClaves = SD.open("fichero.txt");
-  for (int i = 0; i < linea; i++) {
+  ficheroClaves = SD.open("hola.txt");
+  for(int i = 0; i<linea; i++){
     nextLine();
-  }
-  long posicion = ficheroClaves.position();
-  ficheroClaves.close();
-  
-  ficheroClaves = SD.open("fichero.txt", FILE_WRITE);
-  ficheroClaves.seek(posicion);
-  for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
-    ficheroClaves.print((String)clave[i]);
-    Serial.print("nº: "+(String)clave[i]);
-  }
-  ficheroClaves.print("\n");
+    }
+    
+  claveSimetrica = nextLine();
+  claveSimetrica += ',';
+  Serial.println(claveSimetrica);
+  String temp="" ;
+  int contador = 0;
+  uint8_t devolver[TAMANOCLAVESIMETRICA];
+  for(int i = 0; i< claveSimetrica.length();i++){
+    if(claveSimetrica[i] != ','){
+      temp += claveSimetrica[i];
+      }else{
+        devolver[contador] = (uint8_t)temp.toInt();
+        contador++;
+        temp="";
+        }
+    }
+    
+  return devolver;
+}
 
-  //ficheroClaves.flush();
+void setClaveSimetrica(String nombre, uint8_t *clave) {
+  int linea = nombreEnFichero(nombre);
+  ficheroClaves = SD.open("hola.txt", FILE_WRITE);
+  ficheroClaves.print("master\n");
+  String cad;
+  Serial.print("master\n");
+  for(int i=0;i< TAMANOCLAVESIMETRICA;i++){
+          cad=(String)clave[i];
+          ficheroClaves.print(cad+",");
+          Serial.print(cad);
+      }
+      ficheroClaves.print(',');
+  
+  ficheroClaves.print("\n");
   ficheroClaves.close();
 }
 
-int *claveAleatoria() {
-  int clave[TAMANOCLAVESIMETRICA];
+uint8_t *claveAleatoria() {
+  uint8_t clave[TAMANOCLAVESIMETRICA];
+  uint8_t claveTemp;
   for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
-    clave[i] = random(0, 256);
-
+    clave[i] = (uint8_t)random(0, 256);
   }
-  for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
-    imprime((int)clave[i]);
-  }
+ 
   return clave;
 }
 
 int cuentaLineas() {
   //Cuenta el numero de lineas del fichero de claves local
   ficheroClaves.close();
-  ficheroClaves = SD.open("fichero.txt");
+  ficheroClaves = SD.open("hola.txt");
   int nLineas = 0;
   while (ficheroClaves.read() != -1) {
     if ((char)ficheroClaves.peek() == '\n') {
@@ -189,7 +195,7 @@ int cuentaLineas() {
     }
   }
   ficheroClaves.close();
-  ficheroClaves = SD.open("fichero.txt");
+  ficheroClaves = SD.open("hola.txt");
   return nLineas;
 }
 
@@ -217,19 +223,35 @@ void imprime(String cadena) {
 }
 //-----------------------Funciones relativas a la fase de la conexion----------------
 void primeraConexion() {
+  randomSeed(analogRead(A0));
+  uint8_t clave[TAMANOCLAVESIMETRICA];
+  int temp;
   while (true) {
     if (Serial.available()) {
-
-      ficheroClaves.close();
-      ficheroClaves = SD.open("fichero.txt", FILE_WRITE);
+    
+        for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
+          clave[i] =random(0, 256);
+        } 
+      setClaveSimetrica("master", clave);
+      /*
+      ficheroClaves = SD.open("hola.txt", FILE_WRITE);
       ficheroClaves.write("\nmaster\n");
       ficheroClaves.flush();
+      
+          
+          for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
+            //imprime((int)clave[i]);
+          }
+          
+      String cad;
+      for(int i=0;i< TAMANOCLAVESIMETRICA;i++){
+          cad=(String)clave[i];
+          ficheroClaves.print(cad+" ");
+          Serial.println(cad);
+      }
+      ficheroClaves.write("\n");
       ficheroClaves.close();
-
-      int *claveRandom = claveAleatoria();
-
-
-      setClaveSimetrica("master", claveRandom);
+      */
       break;
     }
   }
@@ -257,24 +279,33 @@ int fase1() {
         caracterEnLectura = Serial.read();
         //imprime(caracterEnLectura);
       }
+      Serial.print("NombreMovil: ");
       imprime(nombreMovil);
-      ficheroClaves.close();
-      ficheroClaves = SD.open("fichero.txt");
-      while (ficheroClaves.available()) {
-        imprime(nextLine());
-      }
+      ficheroClaves = SD.open("hola.txt");
 
       //imprime(" solicita conexion");
 
       if (nombreEnFichero(nombreMovil) != -1) {       //Arduino comprueba que el movil esta en el fichero de nombres
+        Serial.print("Esta registrado ");
         claveSimetrica = getClaveSimetrica(nombreMovil);
         //imprime(nombreMovil);
         //imprime(" SI se encuentra en fichero");
-        int numeroDeAutenticacion = (int)random(pow(10, DIGITOSNUMEROAUTENTICACION));  //Arduino envia numero de autenticacion de identidad de movil en plano
-        char *numeroDeAutenticacionCifrado = (char *)(numeroDeAutenticacion);
-//        aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
-        envia(numeroDeAutenticacionCifrado);
-
+        Serial.println("Llegue"+(String)(int)pow(10, DIGITOSNUMEROAUTENTICACION));
+        randomSeed(analogRead(A0));
+        int numeroDeAutenticacion = random(0,(int)pow(10, DIGITOSNUMEROAUTENTICACION));  //Arduino envia numero de autenticacion de identidad de movil en plano
+        Serial.println("Random: "+(String)numeroDeAutenticacion);
+        char numeroDeAutenticacionCifrado [4];
+        int temp = numeroDeAutenticacion;
+        for(int i = DIGITOSNUMEROAUTENTICACION-1; i>-1;i--){
+        temp = temp %10;
+        numeroDeAutenticacionCifrado[i]=(char)(temp+ ((int)'0'));
+        }
+        
+        aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
+        //envia((String)numeroDeAutenticacionCifrado);
+        Serial.println("Cifrado: "+(String)numeroDeAutenticacionCifrado);
+        aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
+        Serial.println("Sin cifrar "+(String)numeroDeAutenticacionCifrado);
         return numeroDeAutenticacion;
       } else {
         //Nombre no esta en fichero
@@ -326,12 +357,10 @@ boolean fase2(int numeroDeAutenticacion) {
 char fase3() {
   //Devuelve un caracter que representa el modo de trabajo del Arduino
   /*Codigo de recepcion por BT:
-
      '0': Modo open
      '1': Modo show user list
      '2': Modo delete user
      '3': Modo add user
-
   */
   //Envia por BT "OK" cuando accede al modo solicitado
   //imprime("---------Fase 3 de conexion---------");
@@ -375,10 +404,8 @@ void setup() {
   }
   //imprime("Inicializada tarjeta SD");
 
-  ficheroClaves = SD.open("fichero.txt");
-
-  imprime(ficheroClaves.size());
-  if (true) { //ficheroClaves.size() == 0) {
+  //imprime(ficheroClaves.size());
+  if (!SD.exists("hola.txt")) {
     primeraConexion();
   }
 }
