@@ -1,30 +1,30 @@
- /**
-   El proyecto BlueFingerprint consiste en el establecimiento una conexion segura entre un movil y una placa controladora por medio
-   de Bluetooth de manera que la placa controladora sea capaz de abrir un cerrojo unicamente bajo la autenticacion
-   de la identidad de un usuario legitimo. El objetivo final es crear un sustitutivo de las llaves fisicas para cerraduras
-   reales que verifique de manera mas segura la identidad del usuario que pretende abrirla.
-   Dado que todo cerrojo fisico tiene, al menos, un usuario legitimo; todos los usuarios del sistema estan supeditados
-   a la autorizacion de un usuario master del cual se obtienen las credenciales en la primera conexion de la historia
-   de la placa.
-   Dado que una placa representa una cerradura, todas las cerraduras presentan la posibilidad de tener multiples usuarios
-   capaces de abrirlas, por lo que admiten varios usuarios validos. Del mismo modo, en el mundo fisico un usuario no solo
-   tiene la llave de un cerrojo, sino que puede poseer la llave de varios, por lo que un mismo usuario podra establecer
-   tambien sesiones de conexion independientes con varias placas controladoras que implementen el sistema sin que esto presente
-   una vulnerabilidad en la conexion.
-   Para lograr el objetivo, la verificacion de identidad se divide en tres partes:
-   -Verificacion biometrica por parte del movil que impide establecer la conexion en caso de suplantacion, realizada
-   gracias al analisis de huella dactilar integrado en el SO Android.
-   -Integridad de las peticiones de conexion mediante un codigo de validacion aleatorio y una clave simetrica unica
-   para cada dispositivo capaz de establecer una conexion con la placa. Se implementa el cifrado AES mediante una
-   libreria publica.
-   -Proteccion de las modificaciones en los registros de usuarios permitidos mediante un sistema de contraseña y
-   un unico usuario master capacitado para realizarlas.
-   Las posibles vulnerabilidades del sistema mitigadas por BlueFingerprint son:
-   -Suplantacion de identidad
-   -Ataque de tipo man in the middle
-   -Robo del token de verificacion de identidad
-   -Robo de claves de sesion
-   -Ataque a la integridad de las peticiones
+/**
+  El proyecto BlueFingerprint consiste en el establecimiento una conexion segura entre un movil y una placa controladora por medio
+  de Bluetooth de manera que la placa controladora sea capaz de abrir un cerrojo unicamente bajo la autenticacion
+  de la identidad de un usuario legitimo. El objetivo final es crear un sustitutivo de las llaves fisicas para cerraduras
+  reales que verifique de manera mas segura la identidad del usuario que pretende abrirla.
+  Dado que todo cerrojo fisico tiene, al menos, un usuario legitimo; todos los usuarios del sistema estan supeditados
+  a la autorizacion de un usuario master del cual se obtienen las credenciales en la primera conexion de la historia
+  de la placa.
+  Dado que una placa representa una cerradura, todas las cerraduras presentan la posibilidad de tener multiples usuarios
+  capaces de abrirlas, por lo que admiten varios usuarios validos. Del mismo modo, en el mundo fisico un usuario no solo
+  tiene la llave de un cerrojo, sino que puede poseer la llave de varios, por lo que un mismo usuario podra establecer
+  tambien sesiones de conexion independientes con varias placas controladoras que implementen el sistema sin que esto presente
+  una vulnerabilidad en la conexion.
+  Para lograr el objetivo, la verificacion de identidad se divide en tres partes:
+  -Verificacion biometrica por parte del movil que impide establecer la conexion en caso de suplantacion, realizada
+  gracias al analisis de huella dactilar integrado en el SO Android.
+  -Integridad de las peticiones de conexion mediante un codigo de validacion aleatorio y una clave simetrica unica
+  para cada dispositivo capaz de establecer una conexion con la placa. Se implementa el cifrado AES mediante una
+  libreria publica.
+  -Proteccion de las modificaciones en los registros de usuarios permitidos mediante un sistema de contraseña y
+  un unico usuario master capacitado para realizarlas.
+  Las posibles vulnerabilidades del sistema mitigadas por BlueFingerprint son:
+  -Suplantacion de identidad
+  -Ataque de tipo man in the middle
+  -Robo del token de verificacion de identidad
+  -Robo de claves de sesion
+  -Ataque a la integridad de las peticiones
 */
 //Librerias de cifrado simetrico AES
 #include <aes_keyschedule.h>
@@ -334,11 +334,12 @@ int fase1() {
           Serial.print(",");
         }
         Serial.println();
-        aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
+        //aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
         envia("CLAVE");
+        delay(100);
         envia((String)numeroDeAutenticacionCifrado);
         Serial.println("Cifrado: " + (String)numeroDeAutenticacionCifrado);
-        aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
+        //aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
         Serial.println("Sin cifrar " + (String)numeroDeAutenticacionCifrado);
         return numeroDeAutenticacion;
       } else {
@@ -358,7 +359,20 @@ boolean fase2(int numeroDeAutenticacion) {
   //Recibe por BT el numero de autenticacion cifrado con la clave simetrica del movil que solicita la conexion
   //Envia por BT "OK" o "NO" en funcion de si la conexion se aborto o no
   //Devuelve true si la conexion continua, false si se aborta
-  char *numeroDeAutenticacionPlano = (char *)(numeroDeAutenticacion);
+  String numeroDeAutenticacionPlano = (String)(numeroDeAutenticacion);
+
+  if (numeroDeAutenticacionPlano.length() == 3) {
+    numeroDeAutenticacionPlano = "0" + numeroDeAutenticacionPlano;
+  }
+  else if (numeroDeAutenticacionPlano.length() == 2) {
+    numeroDeAutenticacionPlano = "00" + numeroDeAutenticacionPlano;
+
+  }
+  else if (numeroDeAutenticacionPlano.length() == 1) {
+    numeroDeAutenticacionPlano = "000" + numeroDeAutenticacionPlano;
+
+  }
+  
   char numeroDeAutenticacionCifrado[TAMANOMENSAJECIFRADO + 1];
   int contador = 0;
   //imprime("---------Fase 2 de conexion---------");
@@ -367,15 +381,19 @@ boolean fase2(int numeroDeAutenticacion) {
   while (true) {
     if (Serial.available() > 0) {
       char caracterEnLectura = Serial.read();
-
-      while (contador < TAMANOMENSAJECIFRADO && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
-        numeroDeAutenticacionCifrado[contador] = caracterEnLectura;
+      String numTemp;
+      while (contador < DIGITOSNUMEROAUTENTICACION && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
+        //numeroDeAutenticacionCifrado[contador] = caracterEnLectura;
+        numTemp+= caracterEnLectura;
         contador ++;
+        delay(100);
         caracterEnLectura = Serial.read();
+        //Serial.print(numTemp[contador]);
       }
-
+      Serial.print("numeroRecibido: ");
+      Serial.println(numTemp);
       //      aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
-      if (strcmp(numeroDeAutenticacionCifrado, numeroDeAutenticacionPlano) == 0) {
+      if (numTemp.compareTo(numeroDeAutenticacionPlano) == 0) {
         //Autenticado
         envia("OK");
         //imprime("Identidad confirmada");
@@ -405,7 +423,7 @@ char fase3() {
   while (true) {
     if (Serial.available() > 0) {
       char modoDeTrabajo = Serial.read();
-      aes256_dec_single(claveSimetrica, modoDeTrabajo);
+      //aes256_dec_single(claveSimetrica, modoDeTrabajo);
 
 
       if (modoDeTrabajo == '0') {
@@ -459,7 +477,10 @@ void loop() {
   if (numeroDeAutenticacion != -1) {  //Enviado "OK" en fase 1 de conexion
     enciendeVerdeTemp();
     boolean continuar = fase2((numeroDeAutenticacion + 1) % ((int)pow(10, DIGITOSNUMEROAUTENTICACION)));
+
     if (continuar == true) {  //Enviado "OK" en fase 2 de conexion. Conexion establecida.
+      enciendeVerdeTemp();
+
       //Seleccion de modo de trabajo en fase 3
       char modoDeTrabajo = fase3();
 
