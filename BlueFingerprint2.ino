@@ -64,11 +64,26 @@
 #define DIGITOSNUMEROAUTENTICACION 4
 #define TAMANOLINEAFICHERO (TAMANONOMBREMOVIL + TAMANOCLAVESIMETRICA + 1)
 
+#define PINROJO 10
+#define PINVERDE 11
+
 //Variables globales
 File ficheroClaves;
 uint8_t claveSimetrica[TAMANOCLAVESIMETRICA];
 
 //------------------------Funciones de proposito general-----------------------------
+void enciendeRojoTemp() {
+  digitalWrite(PINVERDE, LOW);
+  digitalWrite(PINROJO, HIGH);
+  delay(3000);
+  digitalWrite(PINVERDE, LOW);
+}
+void enciendeVerdeTemp() {
+  digitalWrite(PINVERDE, HIGH);
+  digitalWrite(PINROJO, LOW);
+  delay(3000);
+  digitalWrite(PINVERDE, LOW);
+}
 //Funciones de formato
 
 char *aArrayDeCaracteres(String s) {
@@ -318,6 +333,7 @@ int fase1() {
         //Nombre no esta en fichero
         //imprime(nombreMovil);
         //imprime(" NO se encuentra en fichero");
+
         envia("NO");
 
         return -1;
@@ -362,46 +378,51 @@ boolean fase2(int numeroDeAutenticacion) {
   }
 }
 char fase3() {
-  //Devuelve un caracter que representa el modo de trabajo del Arduino
+  //Devuelve un caracter que representa el modo de trabajo del Arduino o '\0' en caso de caracter no valido
   /*Codigo de recepcion por BT:
      '0': Modo open
      '1': Modo show user list
      '2': Modo delete user
      '3': Modo add user
+
+   Recibe uno de estos caracteres cifrados con la claveSimetrica
   */
   //Envia por BT "OK" cuando accede al modo solicitado
   //imprime("---------Fase 3 de conexion---------");
   //imprime("");
   while (true) {
     if (Serial.available() > 0) {
-      switch (Serial.read()) {
-        case '0':
-          envia("OK");
-          //imprime("Entrando en modo open");
-          return '0';
-        case '1':
-          envia("OK");
+      char modoDeTrabajo = Serial.read();
+      aes256_dec_single(claveSimetrica, modoDeTrabajo);
 
-          //imprime("Entrando en modo show user list");
-          return '1';
 
-        case '2':
-          envia("OK");
-
-          //imprime("Entrando en modo delete user");
-          return '2';
-
-        case '3':
-          envia("OK");
-
-          //imprime("Entrando en modo add user");
-          return '3';
+      if (modoDeTrabajo == '0') {
+        return '0';
       }
+      else if (modoDeTrabajo == '1') {
+        return '1';
+
+      }
+      else if (modoDeTrabajo == '2') {
+        return '2';
+
+      }
+      else if (modoDeTrabajo == '3') {
+        return '3';
+
+      }
+      else {
+        return '\0';
+
+      }
+
     }
   }
 }
 
 void setup() {
+  pinMode(PINROJO, OUTPUT);
+  pinMode(PINVERDE, OUTPUT);
   Serial.begin(9600);
   //imprime("Inicializada comunicacion");
   if (!SD.begin(53))
@@ -421,30 +442,38 @@ void loop() {
   //Establecimiento de conexion en fase 1 y fase 2
   int numeroDeAutenticacion = fase1();
   if (numeroDeAutenticacion != -1) {  //Enviado "OK" en fase 1 de conexion
+    enciendeVerdeTemp();
     boolean continuar = fase2((numeroDeAutenticacion + 1) % ((int)pow(10, DIGITOSNUMEROAUTENTICACION)));
     if (continuar == true) {  //Enviado "OK" en fase 2 de conexion. Conexion establecida.
       //Seleccion de modo de trabajo en fase 3
       char modoDeTrabajo = fase3();
 
-      switch (modoDeTrabajo) {
-        case '0':
-          break;
-        case '1':
-          break;
-        case '2':
-          break;
-        case '3':
-          break;
+      if (modoDeTrabajo == '0') {
+        enciendeVerdeTemp();
       }
+      else if (modoDeTrabajo == '1') {
+        enciendeVerdeTemp();
 
+      }
+      else if (modoDeTrabajo == '2') {
+        enciendeVerdeTemp();
+
+      }
+      else if (modoDeTrabajo == '3') {
+        enciendeVerdeTemp();
+
+      }
+      else {
+        enciendeRojoTemp();
+
+      }
     } else {    //Enviado "NO" en fase 2 de conexion
+      enciendeRojoTemp();
       //imprime("");
       //imprime("----------------------REINICIO DE CONEXION-------------------");
       //imprime("");
     }
-
-  }
-  else {    //Enviado "NO" en fase 1 de conexion
+  } else {    //Enviado "NO" en fase 1 de conexion
     //imprime("");
     //imprime("----------------------REINICIO DE CONEXION-------------------");
     //imprime("");
