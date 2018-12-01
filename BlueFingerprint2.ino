@@ -66,7 +66,7 @@
 
 //Variables globales
 File ficheroClaves;
-uint8_t *claveSimetrica = malloc(TAMANOCLAVESIMETRICA*sizeof(uint8_t));
+uint8_t claveSimetrica[TAMANOCLAVESIMETRICA];
 
 //------------------------Funciones de proposito general-----------------------------
 //Funciones de formato
@@ -99,7 +99,7 @@ String nextLine() {
     linea += temp;
     temp = (char)ficheroClaves.read();
   }
- 
+
   return linea;
 }
 int nombreEnFichero(String nombre) {
@@ -113,7 +113,7 @@ int nombreEnFichero(String nombre) {
 
     for (int i = 0; i < lineaEnLectura.length() - 1; i++) {
 
-      if (lineaEnLectura.length() - 1 != nombre.length()-1) {
+      if (lineaEnLectura.length() - 1 != nombre.length() - 1) {
         break;
       }
       if (lineaEnLectura[i] != nombre[i]) {
@@ -129,32 +129,32 @@ int nombreEnFichero(String nombre) {
   }
   return -1;
 }
-uint8_t *getClaveSimetrica(String nombre) {
-  
-  String claveSimetrica;
+void getClaveSimetrica (String nombre) {
+
+  String clave;
   int linea = nombreEnFichero(nombre);
   ficheroClaves = SD.open("hola.txt");
-  for(int i = 0; i<linea; i++){
+  for (int i = 0; i < linea; i++) {
     nextLine();
-    }
-    
-  claveSimetrica = nextLine();
-  claveSimetrica += ',';
-  Serial.println(claveSimetrica);
-  String temp="" ;
+  }
+
+  clave = nextLine();
+  Serial.println(clave);
+  String temp = "" ;
   int contador = 0;
-  uint8_t devolver[TAMANOCLAVESIMETRICA];
-  for(int i = 0; i< claveSimetrica.length();i++){
-    if(claveSimetrica[i] != ','){
-      temp += claveSimetrica[i];
-      }else{
-        devolver[contador] = (uint8_t)temp.toInt();
-        contador++;
-        temp="";
-        }
+
+  Serial.println("Tamano de clave: " + (String)clave.length());
+  for (int i = 0; i < clave.length(); i++) {
+    if (clave[i] != ',') {
+      temp += clave[i];
+    } else {
+      claveSimetrica[contador] = (uint8_t)temp.toInt();
+      contador++;
+      temp = "";
     }
-    
-  return devolver;
+  }
+
+
 }
 
 void setClaveSimetrica(String nombre, uint8_t *clave) {
@@ -163,13 +163,13 @@ void setClaveSimetrica(String nombre, uint8_t *clave) {
   ficheroClaves.print("master\n");
   String cad;
   Serial.print("master\n");
-  for(int i=0;i< TAMANOCLAVESIMETRICA;i++){
-          cad=(String)clave[i];
-          ficheroClaves.print(cad+",");
-          Serial.print(cad);
-      }
-      ficheroClaves.print(',');
-  
+  for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
+    cad = (String)clave[i];
+    ficheroClaves.print(cad + ",");
+    Serial.print(cad);
+  }
+  ficheroClaves.print(',');
+
   ficheroClaves.print("\n");
   ficheroClaves.close();
 }
@@ -180,7 +180,7 @@ uint8_t *claveAleatoria() {
   for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
     clave[i] = (uint8_t)random(0, 256);
   }
- 
+
   return clave;
 }
 
@@ -228,29 +228,29 @@ void primeraConexion() {
   int temp;
   while (true) {
     if (Serial.available()) {
-    
-        for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
-          clave[i] =random(0, 256);
-        } 
+
+      for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
+        clave[i] = random(0, 256);
+      }
       setClaveSimetrica("master", clave);
       /*
-      ficheroClaves = SD.open("hola.txt", FILE_WRITE);
-      ficheroClaves.write("\nmaster\n");
-      ficheroClaves.flush();
-      
-          
+        ficheroClaves = SD.open("hola.txt", FILE_WRITE);
+        ficheroClaves.write("\nmaster\n");
+        ficheroClaves.flush();
+
+
           for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
             //imprime((int)clave[i]);
           }
-          
-      String cad;
-      for(int i=0;i< TAMANOCLAVESIMETRICA;i++){
+
+        String cad;
+        for(int i=0;i< TAMANOCLAVESIMETRICA;i++){
           cad=(String)clave[i];
           ficheroClaves.print(cad+" ");
           Serial.println(cad);
-      }
-      ficheroClaves.write("\n");
-      ficheroClaves.close();
+        }
+        ficheroClaves.write("\n");
+        ficheroClaves.close();
       */
       break;
     }
@@ -287,25 +287,32 @@ int fase1() {
 
       if (nombreEnFichero(nombreMovil) != -1) {       //Arduino comprueba que el movil esta en el fichero de nombres
         Serial.print("Esta registrado ");
-        claveSimetrica = getClaveSimetrica(nombreMovil);
+        getClaveSimetrica(nombreMovil);
         //imprime(nombreMovil);
         //imprime(" SI se encuentra en fichero");
-        Serial.println("Llegue"+(String)(int)pow(10, DIGITOSNUMEROAUTENTICACION));
+        Serial.println("Llegue" + (String)(int)pow(10, DIGITOSNUMEROAUTENTICACION));
         randomSeed(analogRead(A0));
-        int numeroDeAutenticacion = random(0,(int)pow(10, DIGITOSNUMEROAUTENTICACION));  //Arduino envia numero de autenticacion de identidad de movil en plano
-        Serial.println("Random: "+(String)numeroDeAutenticacion);
+        int numeroDeAutenticacion = random(0, (int)pow(10, DIGITOSNUMEROAUTENTICACION)); //Arduino envia numero de autenticacion de identidad de movil en plano
+        Serial.println("Random: " + (String)numeroDeAutenticacion);
         char numeroDeAutenticacionCifrado [4];
         int temp = numeroDeAutenticacion;
-        for(int i = DIGITOSNUMEROAUTENTICACION-1; i>-1;i--){
-        temp = temp %10;
-        numeroDeAutenticacionCifrado[i]=(char)(temp+ ((int)'0'));
+        int modulo;
+        for (int i = DIGITOSNUMEROAUTENTICACION - 1; i > -1; i--) {
+          modulo = temp % 10;
+          temp /= 10;
+          numeroDeAutenticacionCifrado[i] = (char)(modulo + ((int)'0'));
         }
-        
+        Serial.println("Precifrado: " + (String)numeroDeAutenticacionCifrado);
+        for (int i = 0; i < TAMANOCLAVESIMETRICA; i++) {
+          Serial.print(claveSimetrica[i]);
+          Serial.print(",");
+        }
+        Serial.println();
         aes256_enc_single(claveSimetrica, numeroDeAutenticacionCifrado);
         //envia((String)numeroDeAutenticacionCifrado);
-        Serial.println("Cifrado: "+(String)numeroDeAutenticacionCifrado);
+        Serial.println("Cifrado: " + (String)numeroDeAutenticacionCifrado);
         aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
-        Serial.println("Sin cifrar "+(String)numeroDeAutenticacionCifrado);
+        Serial.println("Sin cifrar " + (String)numeroDeAutenticacionCifrado);
         return numeroDeAutenticacion;
       } else {
         //Nombre no esta en fichero
@@ -339,7 +346,7 @@ boolean fase2(int numeroDeAutenticacion) {
         caracterEnLectura = Serial.read();
       }
 
-//      aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
+      //      aes256_dec_single(claveSimetrica, numeroDeAutenticacionCifrado);
       if (strcmp(numeroDeAutenticacionCifrado, numeroDeAutenticacionPlano) == 0) {
         //Autenticado
         envia("OK");
