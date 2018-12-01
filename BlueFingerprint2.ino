@@ -294,7 +294,7 @@ int fase1() {
         caracterEnLectura = Serial.read();
         //imprime(caracterEnLectura);
       }
-      Serial.print("NombreMovil: ");
+      //Serial.print("NombreMovil: ");
       imprime(nombreMovil);
       ficheroClaves = SD.open("hola.txt");
 
