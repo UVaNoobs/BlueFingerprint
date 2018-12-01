@@ -372,7 +372,7 @@ boolean fase2(int numeroDeAutenticacion) {
     numeroDeAutenticacionPlano = "000" + numeroDeAutenticacionPlano;
 
   }
-  
+
   char numeroDeAutenticacionCifrado[TAMANOMENSAJECIFRADO + 1];
   int contador = 0;
   //imprime("---------Fase 2 de conexion---------");
@@ -384,7 +384,7 @@ boolean fase2(int numeroDeAutenticacion) {
       String numTemp;
       while (contador < DIGITOSNUMEROAUTENTICACION && caracterEnLectura != '\0') {   //Arduino recibe nombre del movil
         //numeroDeAutenticacionCifrado[contador] = caracterEnLectura;
-        numTemp+= caracterEnLectura;
+        numTemp += caracterEnLectura;
         contador ++;
         delay(100);
         caracterEnLectura = Serial.read();
@@ -510,6 +510,8 @@ void loop() {
       //imprime("");
     }
   } else {    //Enviado "NO" en fase 1 de conexion
+    enciendeRojoTemp();
+
     //imprime("");
     //imprime("----------------------REINICIO DE CONEXION-------------------");
     //imprime("");
