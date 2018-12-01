@@ -1,4 +1,4 @@
-/**
+ /**
    El proyecto BlueFingerprint consiste en el establecimiento una conexion segura entre un movil y una placa controladora por medio
    de Bluetooth de manera que la placa controladora sea capaz de abrir un cerrojo unicamente bajo la autenticacion
    de la identidad de un usuario legitimo. El objetivo final es crear un sustitutivo de las llaves fisicas para cerraduras
@@ -66,6 +66,8 @@
 
 #define PINROJO 10
 #define PINVERDE 11
+#define PINBLANCO 12
+#define TIEMPOENCENDIDOLED 3000
 
 //Variables globales
 File ficheroClaves;
@@ -73,16 +75,25 @@ uint8_t claveSimetrica[TAMANOCLAVESIMETRICA];
 
 //------------------------Funciones de proposito general-----------------------------
 void enciendeRojoTemp() {
+  digitalWrite(PINBLANCO, LOW);
   digitalWrite(PINVERDE, LOW);
   digitalWrite(PINROJO, HIGH);
-  delay(3000);
-  digitalWrite(PINVERDE, LOW);
+  delay(TIEMPOENCENDIDOLED);
+  digitalWrite(PINROJO, LOW);
 }
 void enciendeVerdeTemp() {
+  digitalWrite(PINBLANCO, LOW);
   digitalWrite(PINVERDE, HIGH);
   digitalWrite(PINROJO, LOW);
-  delay(3000);
+  delay(TIEMPOENCENDIDOLED);
   digitalWrite(PINVERDE, LOW);
+}
+void enciendeBlancoTemp() {
+  digitalWrite(PINBLANCO, HIGH);
+  digitalWrite(PINVERDE, LOW);
+  digitalWrite(PINROJO, LOW);
+  delay(TIEMPOENCENDIDOLED);
+  digitalWrite(PINBLANCO, LOW);
 }
 //Funciones de formato
 
@@ -385,7 +396,7 @@ char fase3() {
      '2': Modo delete user
      '3': Modo add user
 
-   Recibe uno de estos caracteres cifrados con la claveSimetrica
+    Recibe uno de estos caracteres cifrados con la claveSimetrica
   */
   //Envia por BT "OK" cuando accede al modo solicitado
   //imprime("---------Fase 3 de conexion---------");
@@ -423,6 +434,8 @@ char fase3() {
 void setup() {
   pinMode(PINROJO, OUTPUT);
   pinMode(PINVERDE, OUTPUT);
+  pinMode(PINBLANCO, OUTPUT);
+
   Serial.begin(9600);
   //imprime("Inicializada comunicacion");
   if (!SD.begin(53))
@@ -439,6 +452,7 @@ void setup() {
 }
 
 void loop() {
+  enciendeBlancoTemp();
   //Establecimiento de conexion en fase 1 y fase 2
   int numeroDeAutenticacion = fase1();
   if (numeroDeAutenticacion != -1) {  //Enviado "OK" en fase 1 de conexion
